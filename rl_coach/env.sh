@@ -13,7 +13,7 @@ export LOCAL=True
 export S3_ENDPOINT_URL=http://minio1:9000
 
 export MARKOV_PRESET_FILE=deepracer.py
-# export LOCAL_ENV_VAR_JSON_PATH=$(readlink -f ./env_vars.json)
-export LOCAL_ENV_VAR_JSON_PATH=/Users/jonathantse/projects/deepracer/rl_coach/env_vars.json
+export LOCAL_ENV_VAR_JSON_PATH=$(readlink -f ./env_vars.json)
+# export LOCAL_ENV_VAR_JSON_PATH=/Users/jonathantse/projects/deepracer/rl_coach/env_vars.json
 
-ipython rl_deepracer_coach_robomaker.py
+# ipython rl_deepracer_coach_robomaker.py
