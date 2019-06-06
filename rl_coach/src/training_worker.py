@@ -18,6 +18,7 @@ import tensorflow as tf
 tf.logging.set_verbosity(tf.logging.DEBUG)
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 PRETRAINED_MODEL_DIR = "./pretrained_checkpoint"
 SM_MODEL_OUTPUT_DIR = os.environ.get("ALGO_MODEL_DIR", "/opt/ml/model")
@@ -100,7 +101,7 @@ def training_worker(graph_manager, checkpoint_dir, use_pretrained_model, framewo
 
 def main():
     screen.set_use_colors(False)
-    
+
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-pk', '--preset_s3_key',
@@ -227,7 +228,7 @@ def main():
     data_store = S3BotoDataStore(ds_params_instance)
     data_store.graph_manager = graph_manager
     graph_manager.data_store = data_store
-    
+
     training_worker(
         graph_manager=graph_manager,
         checkpoint_dir=args.checkpoint_dir,

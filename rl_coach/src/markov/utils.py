@@ -67,6 +67,9 @@ def load_model_metadata(s3_client, model_metadata_s3_key, model_metadata_local_p
     """Loads the model metadata.
     """
 
+    logger.warning("model_metadata_s3_key = {}, model_metadata_local_path = {}".format(model_metadata_s3_key, model_metadata_local_path))
+
+
     # Strip the s3://<bucket> prefix if it exists
     model_metadata_s3_key = model_metadata_s3_key.replace('s3://{}/'.format(s3_client.bucket), '')
 
@@ -96,9 +99,13 @@ def load_model_metadata(s3_client, model_metadata_s3_key, model_metadata_local_p
     # If the download was unsuccessful, load the default model metadata instead
     if not download_success:
         from markov.defaults import model_metadata
+        logger.info("pwd = {}".format(os.getcwd()))
+        logger.info("Loading model metadata from local disk {}".format(model_metadata_local_path))
         with open(model_metadata_local_path, 'w') as f:
+            print ("model_metadata", model_metadata)
             json.dump(model_metadata, f, indent=4)
-        logger.info("Loaded default action space.")
+            print ("model_metadata", model_metadata)
+            logger.info("Loaded default action space.")
 
 
 class DoorMan:

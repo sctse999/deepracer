@@ -2,27 +2,27 @@
 # coding: utf-8
 
 # # Distributed DeepRacer RL training with SageMaker and RoboMaker
-# 
+#
 # ---
 # ## Introduction
-# 
-# 
-# In this notebook, we will train a fully autonomous 1/18th scale race car using reinforcement learning using Amazon SageMaker RL and AWS RoboMaker's 3D driving simulator. [AWS RoboMaker](https://console.aws.amazon.com/robomaker/home#welcome) is a service that makes it easy for developers to develop, test, and deploy robotics applications.  
-# 
+#
+#
+# In this notebook, we will train a fully autonomous 1/18th scale race car using reinforcement learning using Amazon SageMaker RL and AWS RoboMaker's 3D driving simulator. [AWS RoboMaker](https://console.aws.amazon.com/robomaker/home#welcome) is a service that makes it easy for developers to develop, test, and deploy robotics applications.
+#
 # This notebook provides a jailbreak experience of [AWS DeepRacer](https://console.aws.amazon.com/deepracer/home#welcome), giving us more control over the training/simulation process and RL algorithm tuning.
-# 
+#
 # ![Training in Action](./deepracer-hard-track-world.jpg)
-# 
-# 
+#
+#
 # ---
-# ## How it works?  
-# 
+# ## How it works?
+#
 # ![How training works](./training.png)
-# 
-# The reinforcement learning agent (i.e. our autonomous car) learns to drive by interacting with its environment, e.g., the track, by taking an action in a given state to maximize the expected reward. The agent learns the optimal plan of actions in training by trial-and-error through repeated episodes.  
-#   
-# The figure above shows an example of distributed RL training across SageMaker and two RoboMaker simulation envrionments that perform the **rollouts** - execute a fixed number of episodes using the current model or policy. The rollouts collect agent experiences (state-transition tuples) and share this data with SageMaker for training. SageMaker updates the model policy which is then used to execute the next sequence of rollouts. This training loop continues until the model converges, i.e. the car learns to drive and stops going off-track. More formally, we can define the problem in terms of the following:  
-# 
+#
+# The reinforcement learning agent (i.e. our autonomous car) learns to drive by interacting with its environment, e.g., the track, by taking an action in a given state to maximize the expected reward. The agent learns the optimal plan of actions in training by trial-and-error through repeated episodes.
+#
+# The figure above shows an example of distributed RL training across SageMaker and two RoboMaker simulation envrionments that perform the **rollouts** - execute a fixed number of episodes using the current model or policy. The rollouts collect agent experiences (state-transition tuples) and share this data with SageMaker for training. SageMaker updates the model policy which is then used to execute the next sequence of rollouts. This training loop continues until the model converges, i.e. the car learns to drive and stops going off-track. More formally, we can define the problem in terms of the following:
+#
 # 1. **Objective**: Learn to drive autonomously by staying close to the center of the track.
 # 2. **Environment**: A 3D driving simulator hosted on AWS RoboMaker.
 # 3. **State**: The driving POV image captured by the car's head camera, as shown in the illustration above.
@@ -61,21 +61,22 @@ from markdown_helper import *
 
 # In[ ]:
 
-#Endpoint:  http://10.0.2.15:9000  http://127.0.0.1:9000    
-#AccessKey: UNE5P8U6MAL2YTPO9ME4 
-#SecretKey: py12zho8+d+y0TRtqC4+pofJRsCRSAu6Tl2bSpXM 
+#Endpoint:  http://10.0.2.15:9000  http://127.0.0.1:9000
+#AccessKey: UNE5P8U6MAL2YTPO9ME4
+#SecretKey: py12zho8+d+y0TRtqC4+pofJRsCRSAu6Tl2bSpXM
 
 # S3 bucket
 boto_session = boto3.session.Session(
-    aws_access_key_id="minio", 
+    aws_access_key_id="minio",
     aws_secret_access_key="miniokey",
     region_name="us-east-1")
 s3Client = boto_session.resource("s3", use_ssl=False,
-endpoint_url=os.environ.get("S3_ENDPOINT_URL", "http://127.0.0.1:9000"))
+            endpoint_url = os.environ.get("S3_ENDPOINT_URL", "http://127.0.0.1:9000"))
+endpoint_url = os.environ.get("S3_ENDPOINT_URL", "http://127.0.0.1:9000")
 #s3Client.Bucket("bucket").download_file("rl-deepracer-sagemaker/presets/deepracer.py", "./deepracer.py")
 #sys.exit(0)
 sage_session = sagemaker.local.LocalSession(boto_session=boto_session, s3_client=s3Client)
-s3_bucket = "bucket" #sage_session.default_bucket() 
+s3_bucket = "bucket" #sage_session.default_bucket()
 s3_output_path = 's3://{}/'.format(s3_bucket) # SDK appends the job name and output folder
 
 #sys.exit(0)
@@ -124,7 +125,7 @@ print("Using IAM role arn: {}".format(role))
 # ### Permission setup for invoking AWS RoboMaker from this notebook
 
 # In order to enable this notebook to be able to execute AWS RoboMaker jobs, we need to add one trust relationship to the default execution role of this notebook.
-# 
+#
 
 # In[ ]:
 
@@ -134,7 +135,7 @@ print("Using IAM role arn: {}".format(role))
 
 # ### Configure VPC
 
-# Since SageMaker and RoboMaker have to communicate with each other over the network, both of these services need to run in VPC mode. This can be done by supplying subnets and security groups to the job launching scripts.  
+# Since SageMaker and RoboMaker have to communicate with each other over the network, both of these services need to run in VPC mode. This can be done by supplying subnets and security groups to the job launching scripts.
 # We will use the default VPC configuration for this example.
 
 # In[ ]:
@@ -189,14 +190,14 @@ except Exception as e:
 '''
 
 # ## Setup the environment
-# 
+#
 
-# The environment is defined in a Python file called “deepracer_env.py” and the file can be found at `src/robomaker/environments/`. This file implements the gym interface for our Gazebo based RoboMakersimulator. This is a common environment file used by both SageMaker and RoboMaker. The environment variable - `NODE_TYPE` defines which node the code is running on. So, the expressions that have `rospy` dependencies are executed on RoboMaker only.  
-# 
+# The environment is defined in a Python file called “deepracer_env.py” and the file can be found at `src/robomaker/environments/`. This file implements the gym interface for our Gazebo based RoboMakersimulator. This is a common environment file used by both SageMaker and RoboMaker. The environment variable - `NODE_TYPE` defines which node the code is running on. So, the expressions that have `rospy` dependencies are executed on RoboMaker only.
+#
 # We can experiment with different reward functions by modifying `reward_function` in this file. Action space and steering angles can be changed by modifying the step method in `DeepRacerDiscreteEnv` class.
 
 # ### Configure the preset for RL algorithm
-# The parameters that configure the RL training job are defined in `src/robomaker/presets/deepracer.py`. Using the preset file, you can define agent parameters to select the specific agent algorithm. We suggest using Clipped PPO for this example.  
+# The parameters that configure the RL training job are defined in `src/robomaker/presets/deepracer.py`. Using the preset file, you can define agent parameters to select the specific agent algorithm. We suggest using Clipped PPO for this example.
 # You can edit this file to modify algorithm parameters like learning_rate, neural network structure, batch_size, discount factor etc.
 
 # In[ ]:
@@ -220,7 +221,7 @@ except Exception as e:
 
 
 # ### Train the RL model using the Python SDK Script mode¶
-# 
+#
 
 # First, we upload the preset and envrionment file to a particular location on S3, as expected by RoboMaker.
 
@@ -244,13 +245,13 @@ metric_definitions = [
     # Training> Name=main_level/agent, Worker=0, Episode=19, Total reward=-102.88, Steps=19019, Training iteration=1
     {'Name': 'reward-training',
      'Regex': '^Training>.*Total reward=(.*?),'},
-    
+
     # Policy training> Surrogate loss=-0.32664725184440613, KL divergence=7.255815035023261e-06, Entropy=2.83156156539917, training epoch=0, learning_rate=0.00025
     {'Name': 'ppo-surrogate-loss',
      'Regex': '^Policy training>.*Surrogate loss=(.*?),'},
      {'Name': 'ppo-entropy',
      'Regex': '^Policy training>.*Entropy=(.*?),'},
-   
+
     # Testing> Name=main_level/agent, Worker=0, Episode=19, Total reward=1359.12, Steps=20015, Training iteration=2
     {'Name': 'reward-testing',
      'Regex': '^Testing>.*Total reward=(.*?),'},
@@ -258,7 +259,7 @@ metric_definitions = [
 
 
 # We use the RLEstimator for training RL jobs.
-# 
+#
 # 1. Specify the source directory which has the environment file, preset and training code.
 # 2. Specify the entry point as the training code
 # 3. Specify the choice of RL toolkit and framework. This automatically resolves to the ECR path for the RL Container.
@@ -267,12 +268,14 @@ metric_definitions = [
 # 5. Define the metrics definitions that you are interested in capturing in your logs. These can also be visualized in CloudWatch and SageMaker Notebooks.
 
 # In[ ]:
+cmd = f'aws --endpoint-url {endpoint_url} s3 cp ../custom_files s3://{s3_bucket}/custom_files  --recursive'
+print(cmd)
+get_ipython().system(cmd)
 
 
 RLCOACH_PRESET = "deepracer"
 
 instance_type = "local"
-
 
 estimator = RLEstimator(entry_point="training_worker.py",
                         source_dir='src',
@@ -367,8 +370,8 @@ except Exception as e:
         raise e
 
 # ### Launch the Simulation job on RoboMaker
-# 
-# We create [AWS RoboMaker](https://console.aws.amazon.com/robomaker/home#welcome) Simulation Jobs that simulates the environment and shares this data with SageMaker for training. 
+#
+# We create [AWS RoboMaker](https://console.aws.amazon.com/robomaker/home#welcome) Simulation Jobs that simulates the environment and shares this data with SageMaker for training.
 
 # In[ ]:
 
@@ -389,7 +392,7 @@ simulation_application = {"application": simulation_app_arn,
                                            "launchFile": "distributed_training.launch",
                                            "environmentVariables": envriron_vars}
                          }
-                            
+
 vpcConfig = {"subnets": default_subnets,
              "securityGroups": default_security_groups,
              "assignPublicIp": True}
@@ -409,7 +412,7 @@ for job_no in range(num_simulation_workers):
 print("Created the following jobs:")
 job_arns = [response["arn"] for response in responses]
 for job_arn in job_arns:
-    print("Job ARN", job_arn) 
+    print("Job ARN", job_arn)
 
 
 # ### Visualizing the simulations in RoboMaker
@@ -490,7 +493,7 @@ simulation_application = {"application":simulation_app_arn,
                                            "launchFile": "evaluation.launch",
                                            "environmentVariables": envriron_vars}
                          }
-                            
+
 vpcConfig = {"subnets": default_subnets,
              "securityGroups": default_security_groups,
              "assignPublicIp": True}
